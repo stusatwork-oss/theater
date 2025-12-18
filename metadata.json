@@ -1,0 +1,7 @@
+{
+  "name": "Liminal Theater Labyrinth",
+  "description": "A surreal exploration game where users claim theater rooms within a mall backroom labyrinth, using AI to transform their personal media into atmospheric game assets and immersive vibes.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
