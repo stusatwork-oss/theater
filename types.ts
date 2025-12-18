@@ -59,7 +59,7 @@ export function getCompositionKey(v: VibeVector) {
   ].join("-");
 }
 
-/* --- Hallway Generator Types --- */
+/* --- Hallway Physics Types --- */
 
 export type Direction = "N" | "E" | "S" | "W";
 
@@ -81,5 +81,5 @@ export interface HallwayTile {
   rotation: number; // 0, 90, 180, 270
   connections: Record<Direction, boolean>;
   trafficStrength: number;
-  vibeRef?: VibeVector; // Inherited/blended vibe from neighbors
+  variant: string; // e.g. "warm-gritty", "cool-clean"
 }
