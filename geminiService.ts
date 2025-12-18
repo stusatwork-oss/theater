@@ -5,6 +5,19 @@ import { VibeVector } from "./types";
 // Always initialize GoogleGenAI with a named parameter for apiKey
 const getAI = () => new GoogleGenAI({ apiKey: process.env.API_KEY });
 
+const MANAGER_FALLBACKS = [
+  "THE MALL IS CLOSING. PLEASE MOVE TO THE NEAREST EXIT.",
+  "EYES ON THE CARPET. FEET ON THE TILES.",
+  "WE KNOW YOU'RE IN THERE. WE CAN HEAR THE HUM.",
+  "DO NOT ATTEMPT TO OPEN THE UNMARKED DOORS.",
+  "THE POPCORN IS FRESH. THE POPCORN IS ETERNAL.",
+  "MANAGEMENT IS NOT RESPONSIBLE FOR LOST DIMENSIONS.",
+  "KEEP WALKING. THE WALLS ARE BREATHING TODAY.",
+  "YOUR PRESENCE HAS BEEN RECORDED. THANK YOU FOR SHOPPING.",
+  "THE FOUNTAIN IS NOT FOR WISHING.",
+  "LIMIT ONE REALITY PER CUSTOMER."
+];
+
 export const analyzeFlavor = async (prompt: string, base64Image?: string) => {
   const ai = getAI();
   
@@ -30,51 +43,55 @@ export const analyzeFlavor = async (prompt: string, base64Image?: string) => {
     parts: [{ text: `${systemPrompt} Input: ${prompt}` }]
   };
 
-  const response = await ai.models.generateContent({
-    model: "gemini-3-flash-preview",
-    contents,
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          vibeVector: {
-            type: Type.OBJECT,
-            properties: {
-              palette: { type: Type.ARRAY, items: { type: Type.STRING } },
-              warmth: { type: Type.NUMBER },
-              saturation: { type: Type.NUMBER },
-              contrast: { type: Type.NUMBER },
-              entropy: { type: Type.NUMBER },
-              flicker: { type: Type.NUMBER },
-              fog: { type: Type.NUMBER },
-              grain: { type: Type.NUMBER },
-              bloom: { type: Type.NUMBER },
-              moodTag: { type: Type.STRING }
-            },
-            required: ["palette", "warmth", "saturation", "contrast", "entropy", "flicker", "fog", "grain", "bloom", "moodTag"]
-          },
-          condition: { type: Type.STRING },
-          assets: {
-            type: Type.ARRAY,
-            items: {
+  try {
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            vibeVector: {
               type: Type.OBJECT,
               properties: {
-                originalObject: { type: Type.STRING },
-                gameAsset: { type: Type.STRING },
-                confidence: { type: Type.NUMBER }
+                palette: { type: Type.ARRAY, items: { type: Type.STRING } },
+                warmth: { type: Type.NUMBER },
+                saturation: { type: Type.NUMBER },
+                contrast: { type: Type.NUMBER },
+                entropy: { type: Type.NUMBER },
+                flicker: { type: Type.NUMBER },
+                fog: { type: Type.NUMBER },
+                grain: { type: Type.NUMBER },
+                bloom: { type: Type.NUMBER },
+                moodTag: { type: Type.STRING }
               },
-              required: ["originalObject", "gameAsset", "confidence"]
+              required: ["palette", "warmth", "saturation", "contrast", "entropy", "flicker", "fog", "grain", "bloom", "moodTag"]
+            },
+            condition: { type: Type.STRING },
+            assets: {
+              type: Type.ARRAY,
+              items: {
+                type: Type.OBJECT,
+                properties: {
+                  originalObject: { type: Type.STRING },
+                  gameAsset: { type: Type.STRING },
+                  confidence: { type: Type.NUMBER }
+                },
+                required: ["originalObject", "gameAsset", "confidence"]
+              }
             }
-          }
-        },
-        required: ["vibeVector", "condition", "assets"]
+          },
+          required: ["vibeVector", "condition", "assets"]
+        }
       }
-    }
-  });
+    });
 
-  // Use the .text property to access the result
-  return JSON.parse(response.text);
+    return JSON.parse(response.text);
+  } catch (e) {
+    console.error("Flavor Analysis failed:", e);
+    throw e;
+  }
 };
 
 export const generateRoomImage = async (vector: VibeVector, condition: string) => {
@@ -88,30 +105,38 @@ export const generateRoomImage = async (vector: VibeVector, condition: string) =
   Details: ${vector.entropy > 0.7 ? 'Cursed, rotting velvet, spatial distortions' : 'Clean mall tiles, luxury gold trim'}.
   NO PEOPLE. Arthouse film look.`;
   
-  const response = await ai.models.generateContent({
-    model: 'gemini-2.5-flash-image',
-    contents: { parts: [{ text: prompt }] },
-    config: {
-      imageConfig: { aspectRatio: "16:9" }
-    }
-  });
+  try {
+    const response = await ai.models.generateContent({
+      model: 'gemini-2.5-flash-image',
+      contents: { parts: [{ text: prompt }] },
+      config: {
+        imageConfig: { aspectRatio: "16:9" }
+      }
+    });
 
-  // Iterate through parts to find the image part
-  for (const part of response.candidates[0].content.parts) {
-    if (part.inlineData) {
-      return `data:image/png;base64,${part.inlineData.data}`;
+    for (const part of response.candidates[0].content.parts) {
+      if (part.inlineData) {
+        return `data:image/png;base64,${part.inlineData.data}`;
+      }
     }
+  } catch (e) {
+    console.error("Image Generation failed:", e);
   }
   return null;
 };
 
 export const generateManagerRemark = async (status: string) => {
-  const ai = getAI();
-  const response = await ai.models.generateContent({
-    model: 'gemini-3-flash-preview',
-    contents: `You are a creepy, unhelpful, and slightly sinister Mall Manager. 
-    The user is currently: ${status}. 
-    Give them a short, unsettling remark (max 12 words). Do not explain yourself.`,
-  });
-  return response.text;
+  try {
+    const ai = getAI();
+    const response = await ai.models.generateContent({
+      model: 'gemini-3-flash-preview',
+      contents: `You are a creepy, unhelpful, and slightly sinister Mall Manager. 
+      The user is currently: ${status}. 
+      Give them a short, unsettling remark (max 12 words). Do not explain yourself.`,
+    });
+    return response.text;
+  } catch (e) {
+    console.warn("Manager Remark failed (likely quota), using fallback.");
+    return MANAGER_FALLBACKS[Math.floor(Math.random() * MANAGER_FALLBACKS.length)];
+  }
 };

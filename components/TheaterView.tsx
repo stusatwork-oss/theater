@@ -21,11 +21,12 @@ const TheaterView: React.FC<Props> = ({ room, onBack, onUpdate, onReset }) => {
 
   useEffect(() => {
     if (loading) {
+      // Slower interval during loading (25s) to avoid Resource Exhausted errors
       const updateQuote = async () => {
         const quote = await generateManagerRemark(status);
-        setManagerQuote(quote || "The labyrinth is shifting. Stand still.");
+        if (quote) setManagerQuote(quote);
       };
-      const interval = setInterval(updateQuote, 6000);
+      const interval = setInterval(updateQuote, 25000);
       return () => clearInterval(interval);
     }
   }, [loading, status]);

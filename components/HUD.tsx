@@ -15,12 +15,13 @@ export const HUD: React.FC<Props> = ({ tiles, playerPos, playerRot, visible }) =
   const [remark, setRemark] = useState("KEEP MOVING. BROWSING IS FOR CUSTOMERS.");
   
   useEffect(() => {
+    // Increased interval to 45 seconds to stay within quota
     const interval = setInterval(async () => {
       if (visible) {
         const text = await generateManagerRemark("Wandering the corridors");
-        setRemark(text);
+        if (text) setRemark(text);
       }
-    }, 15000);
+    }, 45000);
     return () => clearInterval(interval);
   }, [visible]);
 
