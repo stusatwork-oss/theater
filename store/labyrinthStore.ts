@@ -11,6 +11,7 @@ interface LabyrinthState {
   currentRotation: { x: number; y: number };
   
   setRooms: (rooms: Record<string, TheaterRoom>) => void;
+  setEdges: (edges: Record<string, Edge>) => void;
   claimRoom: (id: string, updates: Partial<TheaterRoom>) => void;
   updateTraffic: (from: string, to: string, delta: number) => void;
   movePlayer: (pos: { x: number; y: number; z: number }) => void;
@@ -27,13 +28,17 @@ export const useLabyrinthStore = create<LabyrinthState>()(
       currentRotation: { x: 0, y: 0 },
       
       setRooms: (rooms) => set({ rooms }),
+      setEdges: (edges) => set({ edges }),
       
-      claimRoom: (id, updates) => set((state) => ({
-        rooms: {
-          ...state.rooms,
-          [id]: { ...state.rooms[id], ...updates, owner: 'Guest_User' }
-        }
-      })),
+      claimRoom: (id, updates) => set((state) => {
+        const existingRoom = state.rooms[id] || { id, coords: { x: 0, y: 0 } };
+        return {
+          rooms: {
+            ...state.rooms,
+            [id]: { ...existingRoom, ...updates }
+          }
+        };
+      }),
       
       updateTraffic: (from, to, delta) => set((state) => {
         const key = `${from}->${to}`;
@@ -50,7 +55,7 @@ export const useLabyrinthStore = create<LabyrinthState>()(
       setRotation: (currentRotation) => set({ currentRotation }),
     }),
     {
-      name: 'labyrinth-storage-v2',
+      name: 'labyrinth-storage-v5', // New version to ensure clean layout state
       partialize: (state) => ({ 
         rooms: state.rooms, 
         edges: state.edges,
@@ -60,14 +65,24 @@ export const useLabyrinthStore = create<LabyrinthState>()(
   )
 );
 
-export function createTestLabyrinth() {
+export function createTestLabyrinth(): { rooms: Record<string, TheaterRoom>, edges: Record<string, Edge> } {
   const rooms: Record<string, TheaterRoom> = {};
-  const size = 12;
-  for (let x = 0; x < size; x++) {
-    for (let y = 0; y < size; y++) {
-      const id = `${x}-${y}`;
-      rooms[id] = { id, coords: { x, y } };
+  const edges: Record<string, Edge> = {};
+  
+  // A small cross-grid of available sectors
+  const roomCoords = [
+    [0, 0], [0, 2], [0, -2], [2, 0], [-2, 0]
+  ];
+  
+  roomCoords.forEach(([rx, ry]) => {
+    const id = `${rx}-${ry}`;
+    rooms[id] = { id, coords: { x: rx, y: ry } };
+    
+    // Connect all to center if not center
+    if (rx !== 0 || ry !== 0) {
+      edges[`0-0->${id}`] = { from: '0-0', to: id, traffic: 0.1 };
     }
-  }
-  return rooms;
+  });
+
+  return { rooms, edges };
 }

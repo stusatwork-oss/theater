@@ -31,7 +31,8 @@ export const Minimap: React.FC<Props> = ({ tiles, playerPos, playerRot }) => {
     ctx.save();
     ctx.translate(half, half);
     
-    Object.values(tiles).forEach(tile => {
+    // Fix: Explicitly type tile as HallwayTile to resolve property access on unknown type errors (lines 35, 37, 38, 45)
+    Object.values(tiles).forEach((tile: HallwayTile) => {
       if (tile.type === TileType.VOID) return;
 
       const tx = tile.x * 4;

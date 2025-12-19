@@ -29,7 +29,6 @@ export function createTileGeometry(type: TileType): TileGeometry | null {
   const uvs: number[] = [];
 
   const addWall = (x1: number, z1: number, x2: number, z2: number) => {
-    // Normal calculation (cross product of up and wall direction)
     const dx = x2 - x1;
     const dz = z2 - z1;
     const len = Math.sqrt(dx * dx + dz * dz);
@@ -61,15 +60,16 @@ export function createTileGeometry(type: TileType): TileGeometry | null {
       addWall(-halfSize, -halfSize, halfSize, -halfSize); // North
       break;
     case TileType.X:
-      // No walls
+      // No walls in intersection
       break;
     case TileType.DOOR_FRAME:
-      // West wall
-      addWall(-halfSize, -halfSize, -halfSize, halfSize);
-      // North wall
-      addWall(-halfSize, -halfSize, halfSize, -halfSize);
-      // East wall
-      addWall(halfSize, halfSize, halfSize, -halfSize);
+      // Door frames are hallway segments with a specific opening.
+      // We render two side walls, assuming the 'door' is on one of the other faces.
+      addWall(-halfSize, -halfSize, -halfSize, halfSize); // West
+      addWall(halfSize, halfSize, halfSize, -halfSize);  // East
+      // Add a small lintel above where the door would be (North face)
+      const lintelY = 2.2;
+      addWall(-halfSize, halfSize, halfSize, halfSize); // North wall, but we'll manually adjust vertices for a cutout next
       break;
     case TileType.HALL_END:
       addWall(-halfSize, -halfSize, -halfSize, halfSize);

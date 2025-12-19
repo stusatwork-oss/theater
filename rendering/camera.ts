@@ -2,9 +2,13 @@
 import * as THREE from 'three';
 import { checkCollision } from '../physics/collision';
 import { HallwayTile } from '../types';
+import { useLabyrinthStore } from '../store/labyrinthStore';
 
 export const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 100);
-camera.position.set(0, 1.6, 0);
+
+// Initialize position from store if possible
+const initialPos = useLabyrinthStore.getState().currentPosition;
+camera.position.set(initialPos.x, initialPos.y, initialPos.z);
 
 export interface ControlState {
   forward: boolean;
@@ -25,7 +29,7 @@ const moveVector = new THREE.Vector3();
 const targetPos = new THREE.Vector3();
 
 export function setupControls(canvas: HTMLCanvasElement): void {
-  canvas.addEventListener('click', () => {
+  canvas.addEventListener('click', (e) => {
     if (document.pointerLockElement !== canvas) {
       canvas.requestPointerLock();
     }
