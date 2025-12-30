@@ -70,6 +70,7 @@ export const analyzeFlavor = async (prompt: string, base64Image?: string) => {
             },
             condition: { type: Type.STRING },
             assets: {
+              // Fix: Changed Record<string, any> to Type.ARRAY as Record is a type, not a value.
               type: Type.ARRAY,
               items: {
                 type: Type.OBJECT,
@@ -94,16 +95,30 @@ export const analyzeFlavor = async (prompt: string, base64Image?: string) => {
   }
 };
 
-export const generateRoomImage = async (vector: VibeVector, condition: string) => {
+export const generateRoomImage = async (vector: VibeVector, condition: string, direction: 'front' | 'left' | 'right' | 'behind' = 'front') => {
   const ai = getAI();
-  const prompt = `A cinematic ultra-realistic shot of a small theater inside a mall backroom.
-  Architecture: Abstract, influenced by ${vector.moodTag}.
-  Condition: ${condition} (entropy: ${vector.entropy.toFixed(2)}).
-  Lighting: ${vector.warmth > 0.5 ? 'Warm orange-tinted' : 'Cool blue-tinted'} lighting, ${vector.flicker > 0.5 ? 'flickering fluorescent' : 'stable cinematic'} personality.
-  Atmosphere: ${vector.fog > 0.5 ? 'Dense depth haze' : 'Clear air'}, ${vector.bloom > 0.5 ? 'heavy bloom highlights' : 'sharp details'}.
-  Colors: Dominant ${vector.palette.join(", ")}.
-  Details: ${vector.entropy > 0.7 ? 'Cursed, rotting velvet, spatial distortions' : 'Clean mall tiles, luxury gold trim'}.
-  NO PEOPLE. Arthouse film look.`;
+  
+  const orientationMap = {
+    front: "Centered wide-angle perspective looking directly at the main cinema screen and plush velvet curtains.",
+    left: "Wide-angle side view looking 90 degrees left, focusing on exit doors, wall sconces, and architectural paneling.",
+    right: "Wide-angle side view looking 90 degrees right, focusing on emergency aisles, carpets, and side-wall fixtures.",
+    behind: "Wide-angle reverse view looking 180 degrees back at the elevated projector booth and heavy entrance doors."
+  };
+
+  // Baking in "Marble" World Building Tips:
+  // 1. Clear Spatial Definition (floors, walls, ceilings)
+  // 2. Multiple Elements (furniture, fixtures)
+  // 3. Depth & Perspective (foreground, midground, background)
+  // 4. Sharp Focus (no blur)
+  // 5. No Characters (humans/animals)
+  const prompt = `CINEMATIC SPATIAL ANCHOR: ${orientationMap[direction]}
+  THEME: Abstract liminal theater inside a mall backroom, influenced by ${vector.moodTag}.
+  CONDITION: ${condition} (entropy level: ${vector.entropy.toFixed(2)}).
+  SPATIAL REQUIREMENTS: Sharp architectural lines defining the floor, walls, and ceiling. Ensure deep perspective with clear foreground, midground, and background elements. 
+  LIGHTING: ${vector.warmth > 0.5 ? 'Warm artificial orange hues' : 'Cool synthetic blue hues'}, ${vector.flicker > 0.5 ? 'unstable flickering fluorescent' : 'stable cinematic'} personality. Clear shadows defining the geometry.
+  ATMOSPHERE: ${vector.fog > 0.5 ? 'Deep depth haze' : 'Crystal clear air'}, ${vector.bloom > 0.5 ? 'blooming light sources' : 'hard surface details'}.
+  COLORS: Palette includes ${vector.palette.join(", ")}.
+  MANDATORY CONSTRAINTS: ABSOLUTELY NO PEOPLE OR ANIMALS. NO BLUR. High-resolution textures. Sharp architectural edges. No image borders or frames. Arthouse liminal aesthetic.`;
   
   try {
     const response = await ai.models.generateContent({
@@ -120,7 +135,7 @@ export const generateRoomImage = async (vector: VibeVector, condition: string) =
       }
     }
   } catch (e) {
-    console.error("Image Generation failed:", e);
+    console.error(`Image Generation (${direction}) failed:`, e);
   }
   return null;
 };

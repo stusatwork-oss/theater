@@ -20,19 +20,25 @@ export interface AssetMatch {
   confidence: number;
 }
 
+export interface SpatialViews {
+  left?: string;
+  right?: string;
+  behind?: string;
+}
+
 export interface TheaterRoom {
   id: string;
   coords: { x: number; y: number };
   owner?: string;
   vibe?: string;
   vibeVector?: VibeVector;
-  // dominantColor is used for the glow effect and extracted from the AI-generated palette
   dominantColor?: string;
-  compositionKey?: string; // e.g. "1-2-0-3"
+  compositionKey?: string; 
   condition?: 'pristine' | 'modern' | 'dusty' | 'abandoned' | 'fallout';
   assets?: AssetMatch[];
   lastContentUpdate?: number;
   imageUrl?: string;
+  spatialViews?: SpatialViews;
   videoUrl?: string;
 }
 
@@ -69,7 +75,7 @@ export enum TileType {
   CORNER = 'CORNER',
   T = 'T',
   X = 'X',
-  DOOR_FRAME = 'DOOR_FRAME', // A claimed room
+  DOOR_FRAME = 'DOOR_FRAME', 
   HALL_END = 'HALL_END'
 }
 
@@ -78,8 +84,8 @@ export interface HallwayTile {
   x: number;
   y: number;
   type: TileType;
-  rotation: number; // 0, 90, 180, 270
+  rotation: number; 
   connections: Record<Direction, boolean>;
   trafficStrength: number;
-  variant: string; // e.g. "warm-gritty", "cool-clean"
+  variant: string; 
 }

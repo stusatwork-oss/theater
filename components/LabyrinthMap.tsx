@@ -14,14 +14,12 @@ const LabyrinthMap: React.FC<Props> = ({ rooms, edges, onEnter }) => {
     return rooms.reduce((acc, room) => ({ ...acc, [room.id]: room }), {} as Record<string, TheaterRoom>);
   }, [rooms]);
 
-  // Use a slightly larger grid for the scrollable labyrinth feel
   const layoutSize = 8;
   const layout = useMemo(() => {
     return generateLabyrinthLayout(roomsRecord, edges, layoutSize);
   }, [roomsRecord, edges]);
 
   const gridCells = [];
-  // Use centered range to match generated layout
   const start = -Math.floor(layoutSize / 2);
   const end = start + layoutSize;
   
@@ -31,23 +29,25 @@ const LabyrinthMap: React.FC<Props> = ({ rooms, edges, onEnter }) => {
     }
   }
 
-  const getVariantStyle = (variant: string) => {
-    if (variant.includes('warm')) return 'bg-orange-950/20 border-orange-900/20';
-    if (variant.includes('cool')) return 'bg-cyan-950/20 border-cyan-900/20';
-    return 'bg-slate-900/30 border-white/5';
-  };
-
   return (
-    <div className="w-full h-full p-8 md:p-20 overflow-auto flex items-start justify-center bg-[radial-gradient(circle_at_center,rgba(15,23,42,1)_0%,rgba(0,0,0,1)_100%)]">
+    <div className="w-full h-full overflow-auto flex items-start justify-center bg-[#05070a] relative group">
+      {/* ATMOSPHERIC BACKGROUND */}
+      <div className="absolute inset-0 pointer-events-none overflow-hidden">
+        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[150%] h-[150%] bg-[radial-gradient(circle_at_center,rgba(30,41,59,0.15)_0%,rgba(0,0,0,1)_70%)] opacity-50"></div>
+        <div className="absolute inset-0 bg-[linear-gradient(rgba(255,255,255,0.02)_1px,transparent_1px),linear-gradient(90deg,rgba(255,255,255,0.02)_1px,transparent_1px)] bg-[length:50px_50px]"></div>
+      </div>
+
       <div 
-        className="grid gap-0 relative p-12 bg-black/40 rounded-[3rem] border border-white/5 backdrop-blur-sm"
-        style={{ gridTemplateColumns: `repeat(${layoutSize}, minmax(0, 1fr))` }}
+        className="grid gap-0 relative p-24 z-10"
+        style={{ 
+            gridTemplateColumns: `repeat(${layoutSize}, minmax(0, 1fr))`,
+            perspective: '1000px'
+        }}
       >
         {gridCells.map((tile) => {
-           if (!tile) return <div key={Math.random()} className="w-24 h-36 md:w-32 md:h-48"></div>;
+           if (!tile) return <div key={Math.random()} className="w-32 h-44 md:w-40 md:h-56"></div>;
            const room = roomsRecord[tile.id];
 
-           // Case 1: Active Door Node (The "Cards")
            if (tile.type === TileType.DOOR_FRAME) {
               const isClaimed = !!room?.owner;
               const glowColor = room?.dominantColor || '#ffffff10';
@@ -56,81 +56,107 @@ const LabyrinthMap: React.FC<Props> = ({ rooms, edges, onEnter }) => {
                 <div 
                   key={tile.id}
                   onClick={() => onEnter(tile.id)}
-                  className="relative w-24 h-36 md:w-32 md:h-48 cursor-pointer transition-all duration-500 group hover:z-50 hover:scale-110 p-2"
+                  className="relative w-32 h-44 md:w-40 md:h-56 cursor-pointer transition-all duration-700 group/card hover:z-50 hover:scale-110 p-4"
                 >
+                   {/* CARD GLOW */}
                    {isClaimed && (
                      <div 
-                        className="absolute inset-4 blur-2xl opacity-30 group-hover:opacity-60 transition-opacity animate-pulse"
+                        className="absolute inset-0 blur-[40px] opacity-20 group-hover/card:opacity-40 transition-opacity animate-pulse"
                         style={{ backgroundColor: glowColor }}
                      ></div>
                    )}
 
-                   <div className={`relative h-full bg-slate-900/80 border-2 rounded-xl shadow-2xl overflow-hidden transition-colors ${isClaimed ? 'border-white/20' : 'border-white/5 hover:border-white/20'}`}>
-                      <div className="absolute inset-0 bg-gradient-to-b from-transparent to-black/60"></div>
+                   <div className={`relative h-full bg-[#0a0f18] border-2 rounded-2xl shadow-2xl overflow-hidden transition-all duration-500 transform-gpu group-hover/card:rotate-y-12 ${isClaimed ? 'border-white/10 group-hover/card:border-white/30' : 'border-white/5 group-hover/card:border-white/20'}`}>
+                      {/* ROOM IMAGE PREVIEW */}
+                      {isClaimed && room.imageUrl ? (
+                        <div className="absolute inset-0 z-0">
+                           <img src={room.imageUrl} className="w-full h-full object-cover opacity-40 group-hover/card:opacity-60 transition-opacity saturate-50" />
+                           <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent"></div>
+                        </div>
+                      ) : (
+                        <div className="absolute inset-0 bg-gradient-to-b from-slate-900 to-black/80"></div>
+                      )}
                       
-                      <div className="absolute inset-0 flex flex-col items-center justify-center text-center p-2 z-10">
-                         {isClaimed ? (
-                           <>
-                             <div className="w-2 h-2 rounded-full shadow-[0_0_10px_white] mb-3" style={{ backgroundColor: glowColor }}></div>
-                             <span className="theater-font text-white text-lg font-bold tracking-tighter leading-tight">{tile.id}</span>
-                             <span className="text-[8px] text-white/40 uppercase tracking-[0.2em] mt-1 font-mono">SECTOR_LOCK</span>
-                           </>
-                         ) : (
-                           <>
-                             <i className="fa-solid fa-door-closed text-slate-700 mb-2 group-hover:text-slate-400 transition-colors"></i>
-                             <span className="text-[10px] text-slate-600 uppercase font-mono tracking-widest group-hover:text-slate-400 transition-colors">{tile.id}</span>
-                             <span className="text-[7px] text-slate-800 uppercase mt-1 font-bold group-hover:text-slate-600 transition-colors">AVAILABLE</span>
-                           </>
-                         )}
+                      {/* CARD CONTENT */}
+                      <div className="absolute inset-0 flex flex-col items-center justify-between text-center p-4 z-10">
+                         <div className="text-[8px] text-white/30 font-mono tracking-[0.3em] font-bold">
+                           NODE_{tile.id.replace('-', '_')}
+                         </div>
+
+                         <div className="flex flex-col items-center">
+                            {isClaimed ? (
+                              <>
+                                <div className="w-1.5 h-1.5 rounded-full shadow-[0_0_10px_white] mb-3 animate-pulse" style={{ backgroundColor: glowColor }}></div>
+                                <span className="theater-font text-white text-xl font-bold tracking-widest leading-none drop-shadow-md">
+                                  {room.vibe?.split('-')[0].toUpperCase() || 'LOCKED'}
+                                </span>
+                              </>
+                            ) : (
+                              <>
+                                <i className="fa-solid fa-door-open text-slate-700 text-xl mb-3 group-hover/card:text-slate-400 transition-colors"></i>
+                                <span className="text-[10px] text-slate-500 uppercase font-mono tracking-[0.2em] group-hover/card:text-slate-300 transition-colors font-bold">VACANT_SECTOR</span>
+                              </>
+                            )}
+                         </div>
+
+                         <div className="w-full flex justify-between items-center text-[7px] text-white/20 font-mono font-bold uppercase tracking-tighter">
+                            <span>{isClaimed ? 'AUTH_LEVEL_1' : 'NO_SIGNAL'}</span>
+                            <div className="w-8 h-px bg-white/10"></div>
+                            <span>0x{Math.floor(Math.random()*255).toString(16).toUpperCase()}</span>
+                         </div>
                       </div>
                       
-                      {/* Technical accents */}
-                      <div className="absolute top-1 left-1 w-1 h-1 bg-white/5 rounded-full"></div>
-                      <div className="absolute bottom-1 right-1 w-1 h-1 bg-white/5 rounded-full"></div>
+                      {/* OVERLAY ACCENTS */}
+                      <div className="absolute top-0 left-0 w-full h-full pointer-events-none border border-white/5 rounded-2xl"></div>
                    </div>
                 </div>
               );
            }
            
-           // Case 2: Hallway Tile
            if (tile.type !== TileType.VOID) {
-             const variantStyle = getVariantStyle(tile.variant);
-             
              return (
                <div 
                   key={tile.id} 
-                  className="relative w-24 h-36 md:w-32 md:h-48 flex items-center justify-center pointer-events-none"
+                  className="relative w-32 h-44 md:w-40 md:h-56 flex items-center justify-center pointer-events-none opacity-40 hover:opacity-100 transition-opacity duration-1000"
                >
                   <div 
-                    className="absolute inset-0"
+                    className="absolute inset-0 flex items-center justify-center"
                     style={{ transform: `rotate(${tile.rotation}deg)` }}
                   >
-                     {/* Floor Base */}
-                     <div className={`absolute inset-0 ${variantStyle}`}></div>
-                     
-                     {/* Wall Lines for 2D Roaming aesthetic */}
-                     {!tile.connections.N && <div className="absolute top-0 left-0 right-0 h-[2px] bg-white/10"></div>}
-                     {!tile.connections.S && <div className="absolute bottom-0 left-0 right-0 h-[2px] bg-white/10"></div>}
-                     {!tile.connections.E && <div className="absolute top-0 bottom-0 right-0 w-[2px] bg-white/10"></div>}
-                     {!tile.connections.W && <div className="absolute top-0 bottom-0 left-0 w-[2px] bg-white/10"></div>}
+                     {/* 2D Hallway Graphic (Blueprint Style) */}
+                     <div className="relative w-full h-full flex items-center justify-center">
+                        {/* Horizontal Path */}
+                        {(tile.type === TileType.STRAIGHT || tile.type === TileType.X || tile.type === TileType.T) && (
+                           <div className="absolute w-full h-[1px] bg-slate-800"></div>
+                        )}
+                        {/* Vertical Path Component */}
+                        {(tile.type === TileType.X || tile.type === TileType.T || tile.type === TileType.CORNER) && (
+                           <div className="absolute w-[1px] h-full bg-slate-800"></div>
+                        )}
+                        
+                        {/* Blueprint Details */}
+                        <div className="w-6 h-6 border border-slate-900 rounded-sm flex items-center justify-center">
+                           <div className="w-0.5 h-0.5 bg-slate-800 rounded-full"></div>
+                        </div>
+                     </div>
                   </div>
                </div>
              );
            }
 
-           // Case 3: VOID
            return (
-             <div key={tile.id} className="w-24 h-36 md:w-32 md:h-48 flex items-center justify-center opacity-[0.03]">
-               <div className="w-0.5 h-0.5 bg-white rounded-full"></div>
+             <div key={tile.id} className="w-32 h-44 md:w-40 md:h-56 flex items-center justify-center opacity-[0.05]">
+               <div className="w-1 h-1 bg-white/20 rounded-full"></div>
              </div>
            );
         })}
       </div>
       
-      {/* Background Decor */}
-      <div className="fixed inset-0 pointer-events-none opacity-20 z-0">
-        <div className="absolute top-[-10%] left-[-10%] w-[40%] h-[40%] bg-red-900/20 blur-[150px] rounded-full"></div>
-        <div className="absolute bottom-[-10%] right-[-10%] w-[40%] h-[40%] bg-blue-900/20 blur-[150px] rounded-full"></div>
+      {/* THE MANAGER WATERMARK */}
+      <div className="fixed bottom-10 right-10 pointer-events-none opacity-10">
+         <p className="font-mono text-[8px] uppercase tracking-[0.5em] text-white whitespace-nowrap">
+           MANAGEMENT_ID: {Math.random().toString(36).substring(7).toUpperCase()} // SECTOR_MAP_v2.1
+         </p>
       </div>
     </div>
   );

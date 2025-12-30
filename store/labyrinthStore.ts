@@ -1,7 +1,58 @@
 
 import { create } from 'zustand';
-import { persist } from 'zustand/middleware';
+import { persist, createJSONStorage } from 'zustand/middleware';
 import { TheaterRoom, Edge, VibeVector } from '../types';
+
+/**
+ * A lightweight IndexedDB-backed storage engine for Zustand persistence.
+ * This bypasses the 5MB localStorage limit to allow storing high-res AI images.
+ */
+const idbStorage = {
+  getItem: async (name: string): Promise<string | null> => {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('LabyrinthDB', 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore('store');
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('store', 'readonly');
+        const store = tx.objectStore('store');
+        const getRequest = store.get(name);
+        getRequest.onsuccess = () => resolve(getRequest.result || null);
+        getRequest.onerror = () => resolve(null);
+      };
+      request.onerror = () => resolve(null);
+    });
+  },
+  setItem: async (name: string, value: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('LabyrinthDB', 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore('store');
+      };
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('store', 'readwrite');
+        const store = tx.objectStore('store');
+        store.put(value, name);
+        tx.oncomplete = () => resolve();
+      };
+    });
+  },
+  removeItem: async (name: string): Promise<void> => {
+    return new Promise((resolve) => {
+      const request = indexedDB.open('LabyrinthDB', 1);
+      request.onsuccess = () => {
+        const db = request.result;
+        const tx = db.transaction('store', 'readwrite');
+        const store = tx.objectStore('store');
+        store.delete(name);
+        tx.oncomplete = () => resolve();
+      };
+    });
+  },
+};
 
 interface LabyrinthState {
   rooms: Record<string, TheaterRoom>;
@@ -55,7 +106,8 @@ export const useLabyrinthStore = create<LabyrinthState>()(
       setRotation: (currentRotation) => set({ currentRotation }),
     }),
     {
-      name: 'labyrinth-storage-v5', // New version to ensure clean layout state
+      name: 'labyrinth-large-storage-v1', // Reset key to avoid collision with corrupted localStorage
+      storage: createJSONStorage(() => idbStorage),
       partialize: (state) => ({ 
         rooms: state.rooms, 
         edges: state.edges,
@@ -69,7 +121,6 @@ export function createTestLabyrinth(): { rooms: Record<string, TheaterRoom>, edg
   const rooms: Record<string, TheaterRoom> = {};
   const edges: Record<string, Edge> = {};
   
-  // A small cross-grid of available sectors
   const roomCoords = [
     [0, 0], [0, 2], [0, -2], [2, 0], [-2, 0]
   ];
@@ -78,7 +129,6 @@ export function createTestLabyrinth(): { rooms: Record<string, TheaterRoom>, edg
     const id = `${rx}-${ry}`;
     rooms[id] = { id, coords: { x: rx, y: ry } };
     
-    // Connect all to center if not center
     if (rx !== 0 || ry !== 0) {
       edges[`0-0->${id}`] = { from: '0-0', to: id, traffic: 0.1 };
     }
